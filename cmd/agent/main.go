@@ -15,7 +15,7 @@ import (
 
 var tempDir string = ""
 
-type Server struct {
+type Agent struct {
 	e *echo.Echo
 
 	malwarePath string
@@ -26,7 +26,7 @@ type Server struct {
 func main() {
 	tempDir = os.TempDir()
 
-	s := &Server{
+	s := &Agent{
 		e: echo.New(),
 	}
 
@@ -37,7 +37,7 @@ func main() {
 	s.e.Logger.Fatal(s.e.Start(":6060"))
 }
 
-func (s *Server) uploadMalware(c echo.Context) error {
+func (s *Agent) uploadMalware(c echo.Context) error {
 	filename := c.FormValue("filename")
 
 	file, err := c.FormFile("file")
@@ -66,7 +66,7 @@ func (s *Server) uploadMalware(c echo.Context) error {
 	return c.NoContent(http.StatusAccepted)
 }
 
-func (s *Server) executeMalware(c echo.Context) error {
+func (s *Agent) executeMalware(c echo.Context) error {
 	var err error
 	s.tee, err = tee.Run(s.malwarePath)
 	if err != nil {
@@ -77,7 +77,7 @@ func (s *Server) executeMalware(c echo.Context) error {
 	return c.NoContent(http.StatusAccepted)
 }
 
-func (s *Server) finish(c echo.Context) error {
+func (s *Agent) finish(c echo.Context) error {
 	if err := s.tee.Interrupt(); err != nil {
 		return err
 	}

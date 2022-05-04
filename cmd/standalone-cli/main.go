@@ -1,17 +1,13 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
-	"io"
-	"io/ioutil"
-	"mime/multipart"
-	"net/http"
 	"os"
 	"path/filepath"
 	"time"
 
+	"github.com/codedninja/skener/pkg/agent"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -40,111 +36,25 @@ func main() {
 	}
 	file = &abs
 
+	client := agent.NewAgent(fmt.Sprintf("%s:%s", *agentIP, *agentPort))
+
 	log.Printf("Uploading file %s to agent at %s:%s", *file, *agentIP, *agentPort)
 
-	if err := uploadFile(*file, *agentIP, *agentPort); err != nil {
+	if err := client.UploadFile(*file); err != nil {
 		log.Fatal(err)
 	}
 
-	if err := executeMalware(*agentIP, *agentPort, *timeout); err != nil {
+	if err := client.Execute(); err != nil {
 		log.Fatal(err)
 	}
 
 	log.Printf("Waiting for agent to finish")
 	time.Sleep(time.Second * time.Duration(*timeout))
 
-	logs, err := finish(*agentIP, *agentPort)
+	logs, err := client.Finish()
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	fmt.Println(logs)
-}
-
-func finish(agentIP string, agentPort string) (string, error) {
-	resp, err := http.Post(fmt.Sprintf("http://%s:%s/finish", agentIP, agentPort), "text/plain", nil)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("%s", resp.Status)
-	}
-
-	data, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	return string(data), nil
-}
-
-func executeMalware(agentIP string, agentPort string, timeout int) error {
-	resp, err := http.Post(fmt.Sprintf("http://%s:%s/execute", agentIP, agentPort), "text/plain", nil)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusAccepted {
-		return fmt.Errorf("%s", resp.Status)
-	}
-
-	return nil
-}
-
-func uploadFile(path string, agentIP string, agentPort string) error {
-	f, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-
-	// File
-	formFile, err := writer.CreateFormFile("file", filepath.Base(path))
-	if err != nil {
-		return err
-	}
-
-	if _, err := io.Copy(formFile, f); err != nil {
-		return err
-	}
-
-	// Filename
-	formFilename, err := writer.CreateFormField("filename")
-	if err != nil {
-		return err
-	}
-
-	_, err = io.Copy(formFilename, bytes.NewBufferString(filepath.Base(path)))
-	if err != nil {
-		return err
-	}
-
-	writer.Close()
-
-	request, err := http.NewRequest("POST", fmt.Sprintf("http://%s:%s/malware", agentIP, agentPort), body)
-	if err != nil {
-		return err
-	}
-
-	request.Header.Set("Content-Type", writer.FormDataContentType())
-
-	client := &http.Client{Timeout: 2 * time.Minute}
-
-	resp, err := client.Do(request)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusAccepted {
-		return fmt.Errorf("%s", resp.Status)
-	}
-
-	return nil
 }
