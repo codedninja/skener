@@ -2,11 +2,12 @@ package main
 
 import (
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/codedninja/skener/pkg/tee"
 	"github.com/labstack/echo/v4"
