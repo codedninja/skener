@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/codedninja/skener/internal/queue"
+	"github.com/codedninja/skener/internal/route"
+	"github.com/codedninja/skener/internal/tools"
 	"github.com/codedninja/skener/pkg/agent"
 	log "github.com/sirupsen/logrus"
 
@@ -20,21 +22,22 @@ import (
 
 const (
 	logPath = "./logs/"
-	timeout = 120
+	timeout = 30
 )
 
 var logFiles = []string{
-	// "mitm.log",
-	// "dnschef.log",
 	"agent.log",
+	"mitmproxy-stream.log", // Stream file from mitmproxy
+	"mitmproxy.log",        // Log from stdout & stderr from mitmproxy
 }
 
-var mitmPorts = []string{
-	"8080",
-}
-
-var agentsConnections = []string{
-	"127.0.0.1:6060",
+var agents = []*queue.Agent{
+	{
+		IP:          "192.168.86.80",
+		Port:        "6060",
+		MITMPort:    "8000",
+		DNSChefPort: "7000",
+	},
 }
 
 type Server struct {
@@ -48,7 +51,7 @@ type Server struct {
 func main() {
 	s := &Server{
 		e:     echo.New(),
-		queue: queue.NewJobQueue(agentsConnections),
+		queue: queue.NewJobQueue(agents),
 		jobs:  make(map[string]*Job),
 	}
 
@@ -68,12 +71,14 @@ func main() {
 func (s *Server) analyzeMalware(c echo.Context) error {
 	file, err := c.FormFile("file")
 	if err != nil {
+		log.Error(err)
 		return err
 	}
 
 	// Temporary file
 	src, err := file.Open()
 	if err != nil {
+		log.Error(err)
 		return err
 	}
 	defer src.Close()
@@ -84,7 +89,7 @@ func (s *Server) analyzeMalware(c echo.Context) error {
 	// Create folder
 	path := filepath.Join(logPath, id.String())
 
-	if err := os.MkdirAll(path, 0700); err != nil {
+	if err := os.Mkdir(path, 0777); err != nil {
 		log.Error(err)
 		return err
 	}
@@ -92,14 +97,16 @@ func (s *Server) analyzeMalware(c echo.Context) error {
 	filePath := filepath.Join(path, file.Filename)
 
 	// Move file to folder
-	dst, err := os.Create(filePath)
+	dst, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0777)
 	if err != nil {
+		log.Error(err)
 		return err
 	}
 	defer dst.Close()
 
 	// Copy
 	if _, err = io.Copy(dst, src); err != nil {
+		log.Error(err)
 		return err
 	}
 
@@ -194,14 +201,47 @@ type Job struct {
 	Filename string
 }
 
-func (j *Job) Process(address string) {
+func (j *Job) Process(a *queue.Agent) {
+	outputPath := filepath.Join(logPath, j.ID.String())
+
 	j.Status = "starting"
 
-	// TODO: Setup IP TABLES
-	// TODO: Start mitmproxy and dnschef
+	log.Printf("Adding IPTable rules")
 
-	log.Printf("Processing job %s", j.ID)
+	address := a.IP + ":" + a.Port
+
 	client := agent.NewAgent(address)
+	// Setup IP TABLES
+	routeHttp, err := route.NewRoute(a.MITMPort, a.IP, "80")
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	routeHttps, err := route.NewRoute(a.MITMPort, a.IP, "443")
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	if err := routeHttp.Apply(); err != nil {
+		log.Error(err)
+		return
+	}
+	defer routeHttp.Delete()
+
+	if err := routeHttps.Apply(); err != nil {
+		log.Error(err)
+		return
+	}
+	defer routeHttps.Delete()
+
+	// TODO: Start mitmproxy and dnschef
+	t, err := tools.StartTools("0.0.0.0", a.MITMPort, outputPath)
+	if err != nil {
+		log.Error(err)
+		return
+	}
 
 	log.Printf("Uploading file %s to agent at %s", j.Filename, address)
 	j.Status = "uploading"
@@ -228,7 +268,7 @@ func (j *Job) Process(address string) {
 	}
 
 	// Write logs to file
-	f, err := os.Create(filepath.Join(logPath, j.ID.String(), "agent.log"))
+	f, err := os.Create(filepath.Join(outputPath, "agent.log"))
 	if err != nil {
 		log.Error(err)
 		return
@@ -241,6 +281,8 @@ func (j *Job) Process(address string) {
 	}
 
 	// TODO: Stop mitmproxy and dnschef
+	log.Println(t)
+	t.Stop()
 
 	fmt.Println(logs)
 

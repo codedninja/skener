@@ -3,6 +3,7 @@ module github.com/codedninja/skener
 go 1.18
 
 require (
+	github.com/coreos/go-iptables v0.6.0
 	github.com/google/uuid v1.3.0
 	github.com/labstack/echo/v4 v4.7.2
 	github.com/sirupsen/logrus v1.8.1

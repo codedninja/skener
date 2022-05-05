@@ -42,11 +42,13 @@ func (s *Agent) uploadMalware(c echo.Context) error {
 
 	file, err := c.FormFile("file")
 	if err != nil {
+		log.Error(err)
 		return err
 	}
 
 	f, err := file.Open()
 	if err != nil {
+		log.Error(err)
 		return err
 	}
 	defer f.Close()
@@ -55,11 +57,13 @@ func (s *Agent) uploadMalware(c echo.Context) error {
 
 	dst, err := os.OpenFile(s.malwarePath, os.O_WRONLY|os.O_CREATE, 0777)
 	if err != nil {
+		log.Error(err)
 		return err
 	}
 	defer dst.Close()
 
 	if _, err := io.Copy(dst, f); err != nil {
+		log.Error(err)
 		return err
 	}
 
@@ -78,11 +82,8 @@ func (s *Agent) executeMalware(c echo.Context) error {
 }
 
 func (s *Agent) finish(c echo.Context) error {
-	if err := s.tee.Interrupt(); err != nil {
-		return err
-	}
-
 	if err := s.tee.Close(); err != nil {
+		log.Error(err)
 		return err
 	}
 
