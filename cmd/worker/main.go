@@ -29,6 +29,7 @@ var logFiles = []string{
 	"agent.log",
 	"mitmproxy-stream.log", // Stream file from mitmproxy
 	"mitmproxy.log",        // Log from stdout & stderr from mitmproxy
+	"dnschef.log",          // Log from stdout & stderr from dnschef
 }
 
 var agents = []*queue.Agent{
@@ -212,13 +213,19 @@ func (j *Job) Process(a *queue.Agent) {
 
 	client := agent.NewAgent(address)
 	// Setup IP TABLES
-	routeHttp, err := route.NewRoute(a.MITMPort, a.IP, "80")
+	routeHttp, err := route.NewRoute("tcp", a.MITMPort, a.IP, "80")
 	if err != nil {
 		log.Error(err)
 		return
 	}
 
-	routeHttps, err := route.NewRoute(a.MITMPort, a.IP, "443")
+	routeHttps, err := route.NewRoute("tcp", a.MITMPort, a.IP, "443")
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	routeDNS, err := route.NewRoute("udp", a.DNSChefPort, a.IP, "53")
 	if err != nil {
 		log.Error(err)
 		return
@@ -236,8 +243,14 @@ func (j *Job) Process(a *queue.Agent) {
 	}
 	defer routeHttps.Delete()
 
+	if err := routeDNS.Apply(); err != nil {
+		log.Error(err)
+		return
+	}
+	defer routeDNS.Delete()
+
 	// TODO: Start mitmproxy and dnschef
-	t, err := tools.StartTools("0.0.0.0", a.MITMPort, outputPath)
+	t, err := tools.StartTools("0.0.0.0", a.MITMPort, a.DNSChefPort, outputPath)
 	if err != nil {
 		log.Error(err)
 		return

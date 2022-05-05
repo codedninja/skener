@@ -12,7 +12,7 @@ type Tool struct {
 	Tools map[string]*tee.Tee
 }
 
-func StartTools(interfaceHost string, mitmPort string, logPath string) (*Tool, error) {
+func StartTools(interfaceHost string, mitmPort string, dnschefPort string, logPath string) (*Tool, error) {
 	tools := map[string][]string{
 		"mitmproxy": {
 			"/opt/mitmproxy/mitmdump", // Location of mitmdump
@@ -24,6 +24,12 @@ func StartTools(interfaceHost string, mitmPort string, logPath string) (*Tool, e
 			"--save-stream-file", filepath.Join(logPath, "mitmproxy-stream.log"), // Save stream to file
 			"--flow-detail", "3", // Show flow details 3
 			"--set", "confdir=/root/.mitmproxy", // Set config directory
+		},
+		"dnschef": {
+			"python3", "/opt/dnschef/dnschef.py", // Location of dnschef
+			"--interface", "0.0.0.0", // Listen on interface
+			"--port", dnschefPort, // Listen on port
+			"-q",
 		},
 	}
 

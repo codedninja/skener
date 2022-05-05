@@ -13,7 +13,7 @@ type Route struct {
 	tables          *iptables.IPTables
 }
 
-func NewRoute(toPort string, sourceHost string, destionationPort string) (*Route, error) {
+func NewRoute(protocol string, toPort string, sourceHost string, destionationPort string) (*Route, error) {
 	tables, err := iptables.NewWithProtocol(iptables.ProtocolIPv4)
 	if err != nil {
 		log.Error(err)
@@ -23,7 +23,7 @@ func NewRoute(toPort string, sourceHost string, destionationPort string) (*Route
 	return &Route{
 		Rules: []string{
 			"-s", sourceHost,
-			"-p", "tcp",
+			"-p", protocol,
 			"--destination-port", destionationPort,
 			"-j", "REDIRECT",
 			"--to-port", toPort,
