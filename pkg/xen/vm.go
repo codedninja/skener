@@ -115,3 +115,20 @@ func (v *VM) GetIPs() ([]string, error) {
 
 	return ips, nil
 }
+
+func (v *VM) Resume() error {
+	return v.client.xapi.VM.Resume(v.client.session, v.vm, false, false)
+}
+
+func (v *VM) RevertToLastSnapshot() error {
+	snapshots, err := v.GetSnapshots()
+	if err != nil {
+		return err
+	}
+
+	if err := snapshots[0].Revert(); err != nil {
+		return err
+	}
+
+	return nil
+}

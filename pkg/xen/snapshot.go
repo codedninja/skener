@@ -29,8 +29,6 @@ func (x *VM) GetSnapshots() ([]*Snapshot, error) {
 		log.Printf("snapshot: %s", snapshot)
 	}
 
-	log.Println(snapshots[0])
-
 	return snapshots, nil
 }
 

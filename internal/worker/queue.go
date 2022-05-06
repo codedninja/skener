@@ -89,8 +89,21 @@ func (s *Scan) Process(agent *queue.Agent) {
 	log.Printf("Stopping analysis tools for %s", s.ID)
 	tools.Stop()
 
+	s.Status = "reverting"
+	log.Printf("Reverting VM for %s", agent.IP)
+	if err := agent.VM.RevertToLastSnapshot(); err != nil {
+		log.Error(err)
+	}
+
+	s.Status = "resuming"
+	log.Printf("Resuming VM for %s", agent.IP)
+	if err := agent.VM.Resume(); err != nil {
+		log.Error(err)
+	}
+
 	s.Status = "finished"
 	log.Printf("Finished analysis for %s", s.ID)
+
 	// TODO: Upload logs to S3
 }
 
