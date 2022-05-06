@@ -36,7 +36,7 @@ func main() {
 	}
 	file = &abs
 
-	client := agent.NewAgent(fmt.Sprintf("%s:%s", *agentIP, *agentPort))
+	client := agent.NewClient(fmt.Sprintf("%s:%s", *agentIP, *agentPort))
 
 	log.Printf("Uploading file %s to agent at %s:%s", *file, *agentIP, *agentPort)
 
