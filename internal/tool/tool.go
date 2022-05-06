@@ -1,9 +1,10 @@
-package tools
+package tool
 
 import (
-	"log"
 	"path/filepath"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/codedninja/skener/pkg/tee"
 )
@@ -12,7 +13,7 @@ type Tool struct {
 	Tools map[string]*tee.Tee
 }
 
-func StartTools(interfaceHost string, mitmPort string, dnschefPort string, logPath string) (*Tool, error) {
+func StartTools(interfaceHost string, mitmPort string, dnsPort string, logPath string) (*Tool, error) {
 	tools := map[string][]string{
 		"mitmproxy": {
 			"/opt/mitmproxy/mitmdump", // Location of mitmdump
@@ -28,7 +29,7 @@ func StartTools(interfaceHost string, mitmPort string, dnschefPort string, logPa
 		"dnschef": {
 			"python3", "/opt/dnschef/dnschef.py", // Location of dnschef
 			"--interface", "0.0.0.0", // Listen on interface
-			"--port", dnschefPort, // Listen on port
+			"--port", dnsPort, // Listen on port
 			"-q",
 		},
 	}
@@ -53,7 +54,6 @@ func StartTools(interfaceHost string, mitmPort string, dnschefPort string, logPa
 }
 
 func (t *Tool) Stop() {
-	log.Println(t.Tools)
 	for a, tool := range t.Tools {
 		log.Println("Stopping tool:", a)
 		if err := tool.Kill(); err != nil {

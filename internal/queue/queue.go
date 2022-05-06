@@ -1,16 +1,21 @@
 package queue
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/codedninja/skener/pkg/xen"
+)
 
 type Job interface {
 	Process(*Agent)
 }
 
 type Agent struct {
-	IP          string `json:"ip"`
-	Port        string `json:"port"`
-	MITMPort    string `json:"mitm_port"`
-	DNSChefPort string `json:"dnschef_port"`
+	MITMPort string
+	DNSPort  string
+	IP       string
+
+	VM *xen.VM
 }
 
 type Worker struct {

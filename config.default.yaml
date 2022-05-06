@@ -1,0 +1,22 @@
+address: 0.0.0.0:5050
+
+logpath: ./logs/
+
+xen:
+  address: 
+  username: 
+  password: 
+  tag: malware
+  insecure: true
+
+mitm:
+  path: /opt/mitmproxy/mitmdump
+  ports:
+    min: 8000
+    max: 8999
+
+dns:
+  path: /opt/dnschef/dnschef.py
+  ports:
+    min: 7000
+    max: 7999

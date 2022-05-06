@@ -41,6 +41,7 @@ func Run(outputPath string, name string, args ...string) (*Tee, error) {
 }
 
 func (t *Tee) Kill() error {
+	// https://medium.com/@felixge/killing-a-child-process-and-all-of-its-children-in-go-54079af94773
 	if err := syscall.Kill(-t.cmd.Process.Pid, syscall.SIGKILL); err != nil {
 		log.Error(err)
 	}

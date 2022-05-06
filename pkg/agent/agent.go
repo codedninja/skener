@@ -16,7 +16,7 @@ type Agent struct {
 	Address string
 }
 
-func NewAgent(address string) *Agent {
+func NewClient(address string) *Agent {
 	return &Agent{
 		Address: address,
 	}
