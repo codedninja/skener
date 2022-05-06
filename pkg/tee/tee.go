@@ -2,7 +2,6 @@ package tee
 
 import (
 	"os/exec"
-	"syscall"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -16,9 +15,7 @@ func Run(outputPath string, name string, args ...string) (*Tee, error) {
 	var err error
 	tee := &Tee{}
 
-	cmd := exec.Command(name, args...)
-
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd := newCommand(name, args...)
 
 	tee.logger, err = NewLogger(outputPath)
 	if err != nil {
@@ -42,7 +39,7 @@ func Run(outputPath string, name string, args ...string) (*Tee, error) {
 
 func (t *Tee) Kill() error {
 	// https://medium.com/@felixge/killing-a-child-process-and-all-of-its-children-in-go-54079af94773
-	if err := syscall.Kill(-t.cmd.Process.Pid, syscall.SIGKILL); err != nil {
+	if err := t.kill(); err != nil {
 		log.Error(err)
 	}
 

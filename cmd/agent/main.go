@@ -72,7 +72,8 @@ func (s *Agent) uploadMalware(c echo.Context) error {
 
 func (s *Agent) executeMalware(c echo.Context) error {
 	var err error
-	s.tee, err = tee.Run(s.malwarePath)
+
+	s.tee, err = tee.Run(filepath.Join(tempDir, "tee.log"), s.malwarePath)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -82,10 +83,7 @@ func (s *Agent) executeMalware(c echo.Context) error {
 }
 
 func (s *Agent) finish(c echo.Context) error {
-	if err := s.tee.Close(); err != nil {
-		log.Error(err)
-		return err
-	}
+	s.tee.Kill()
 
 	return c.File(s.tee.Path())
 }
